@@ -65,6 +65,107 @@
     return "";
   }
 
+  // ── Form-fill helpers ──
+
+  function getEditableFields(container) {
+    const els = container.querySelectorAll("input, textarea, select");
+    return Array.from(els).filter((el) => {
+      if (el.disabled || el.readOnly) return false;
+      if (el.tagName === "INPUT" && /^(hidden|submit|reset|button|image|file)$/i.test(el.type)) return false;
+      // Skip invisible fields
+      const style = window.getComputedStyle(el);
+      if (style.display === "none" || style.visibility === "hidden") return false;
+      if (el.offsetWidth === 0 && el.offsetHeight === 0) return false;
+      return true;
+    });
+  }
+
+  function getFormContainer(field) {
+    const form = field.closest("form");
+    if (form) return { container: form, isForm: true };
+    return { container: document.body, isForm: false };
+  }
+
+  function isFirstEditableField(field, container) {
+    const fields = getEditableFields(container);
+    return fields.length > 1 && fields[0] === field;
+  }
+
+  function fillFields(container, randomize) {
+    const fakedata = window.__rci && window.__rci.fakedata;
+    const detector = window.__rci && window.__rci.fielddetector;
+    if (!fakedata || !detector) return;
+
+    const identity = fakedata.generateIdentity();
+    const fields = getEditableFields(container);
+    const originalField = document.activeElement;
+
+    for (const el of fields) {
+      if (el.tagName === "SELECT") {
+        const validOptions = Array.from(el.options).filter((opt) => {
+          if (!opt.value || opt.value === "") return false;
+          if (/^(please |--|select)/i.test(opt.textContent.trim())) return false;
+          return true;
+        });
+        if (validOptions.length === 0) continue;
+
+        // Try to match the identity value to an option
+        const detections = detector.detect(el);
+        const topType = detections.length > 0 ? detections[0].type : null;
+        const target = topType ? identity[topType] : null;
+        let chosen = null;
+
+        if (topType === "country") {
+          // Match common US variants in dropdowns
+          const usVariants = ["united states", "united states of america", "us", "usa", "u.s.", "u.s.a."];
+          chosen = validOptions.find((opt) =>
+            usVariants.includes(opt.value.toLowerCase()) ||
+            usVariants.includes(opt.textContent.trim().toLowerCase())
+          );
+        } else if (target) {
+          const t = target.toLowerCase();
+          chosen = validOptions.find((opt) =>
+            opt.value.toLowerCase() === t ||
+            opt.textContent.trim().toLowerCase() === t
+          );
+        }
+
+        // Fall back to random if no identity match
+        if (!chosen) {
+          chosen = validOptions[Math.floor(Math.random() * validOptions.length)];
+        }
+
+        el.value = chosen.value;
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+        continue;
+      }
+
+      // Clear existing content before filling
+      if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+        el.value = "";
+      }
+
+      if (el.tagName === "TEXTAREA") {
+        insertText(el, generateIpsum("1-paragraph", randomize));
+        continue;
+      }
+
+      // For <input>, detect field type and fill from identity
+      const detections = detector.detect(el);
+      if (detections.length === 0) continue;
+      const topType = detections[0].type;
+      const value = identity[topType];
+      if (value == null) continue;
+      insertText(el, value);
+    }
+
+    // Re-focus the original field
+    if (originalField && originalField.focus) {
+      originalField.focus();
+    }
+  }
+
   // ── Popup state ──
 
   let popupHost = null;
@@ -140,6 +241,10 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    .rci-item-label--bold {
+      font-weight: 600;
     }
   `;
 
@@ -242,6 +347,24 @@
       container.appendChild(divider);
     }
 
+    // Complete form section (only if field is first editable in its container)
+    const { container: formContainer, isForm } = getFormContainer(field);
+    if (isFirstEditableField(field, formContainer)) {
+      const completeItem = document.createElement("div");
+      completeItem.className = "rci-item";
+      completeItem.setAttribute("role", "menuitem");
+      completeItem.innerHTML = '<span class="rci-item-label rci-item-label--bold"></span>';
+      completeItem.querySelector(".rci-item-label").textContent =
+        isForm ? "Complete form" : "Complete all fields on page";
+
+      items.push({ el: completeItem, formFill: true, formContainer, randomize });
+      container.appendChild(completeItem);
+
+      const divider2 = document.createElement("div");
+      divider2.className = "rci-divider";
+      container.appendChild(divider2);
+    }
+
     // Lorem ipsum section
     const ipsumLabel = document.createElement("div");
     ipsumLabel.className = "rci-section-label";
@@ -298,6 +421,13 @@
       item.el.addEventListener("mousedown", (e) => {
         e.preventDefault();
         e.stopPropagation();
+        if (item.formFill) {
+          const fc = item.formContainer;
+          const rand = item.randomize;
+          closePopup();
+          fillFields(fc, rand);
+          return;
+        }
         let text;
         if (item.text != null) {
           text = item.text;
@@ -352,6 +482,13 @@
       e.preventDefault();
       e.stopPropagation();
       const item = menuItems[focusedIndex];
+      if (item.formFill) {
+        const fc = item.formContainer;
+        const rand = item.randomize;
+        closePopup();
+        fillFields(fc, rand);
+        return;
+      }
       let text;
       if (item.text != null) {
         text = item.text;

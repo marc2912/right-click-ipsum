@@ -75,7 +75,6 @@
 
     // Skip non-editable elements
     const tag = el.tagName;
-    if (tag === "SELECT") return [];
     if (el.readOnly || el.disabled) return [];
 
     // textarea and contentEditable get no smart suggestions (only ipsum)

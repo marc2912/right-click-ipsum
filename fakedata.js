@@ -69,6 +69,30 @@
     },
   };
 
+  function generateIdentity() {
+    const first = pick(firstNames);
+    const last = pick(lastNames);
+    const month = String(Math.floor(Math.random() * 12) + 1).padStart(2, "0");
+    const year = new Date().getFullYear() + Math.floor(Math.random() * 5) + 1;
+    return {
+      firstName: first,
+      lastName: last,
+      fullName: first + " " + last,
+      email: first.toLowerCase() + "." + last.toLowerCase() + "@example.com",
+      phone: "(555) 555-" + randomDigits(4),
+      url: "https://www.example.com",
+      address1: randomDigits(3) + " " + pick(streets),
+      address2: pick(units),
+      city: pick(cities),
+      state: pick(states),
+      zip: randomDigits(5),
+      country: "United States",
+      creditCard: "4242 4242 4242 4242",
+      cvv: randomDigits(3),
+      expiration: month + "/" + String(year).slice(-2),
+    };
+  }
+
   const labels = {
     firstName: "First Name",
     lastName: "Last Name",
@@ -88,5 +112,5 @@
   };
 
   window.__rci = window.__rci || {};
-  window.__rci.fakedata = { generators, labels };
+  window.__rci.fakedata = { generators, labels, generateIdentity };
 })();

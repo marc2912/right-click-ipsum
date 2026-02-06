@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <h1>Right Click Ipsum</h1>
+    <p class="description">
+      By default, generated text always starts with "Lorem ipsum..."
+    </p>
+
+    <label class="toggle-row">
+      <span class="toggle-label">Randomize starting location</span>
+      <input type="checkbox" id="randomize" />
+      <span class="toggle-switch"></span>
+    </label>
+
+    <p class="hint">
+      If enabled, a random sentence from the source text is used as the starting
+      point instead of always starting with "Lorem ipsum..."
+    </p>
+
+    <p class="status" id="status"></p>
+
+    <script src="options.js"></script>
+  </body>
+</html>

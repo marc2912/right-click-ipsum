@@ -1,0 +1,13 @@
+{
+  "stack": "browser-extension",
+  "exclude": [
+    "**/*.test.*",
+    "**/*.spec.*",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**"
+  ],
+  "include_inline_examples": true,
+  "include_architecture_diagrams": true,
+  "docusaurus": null
+}

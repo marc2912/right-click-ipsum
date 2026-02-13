@@ -21,19 +21,55 @@
       point instead of always starting with "Lorem ipsum..."
     </p>
 
+    <hr class="section-divider" />
+
+    <h2 class="section-heading">Email Domain</h2>
+    <p class="hint" style="margin-bottom: 12px">
+      Override the domain used for generated email addresses. Leave blank to use
+      the default (example.com).
+    </p>
+    <label class="input-row">
+      <span class="input-label">Domain</span>
+      <input type="text" id="email-domain" placeholder="example.com" />
+    </label>
+
     <p class="status" id="status"></p>
 
     <hr class="section-divider" />
 
-    <h2 class="section-heading">Keyboard Shortcut</h2>
+    <h2 class="section-heading">Keyboard Shortcuts</h2>
     <p class="shortcut-display">
       <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>L</kbd>
     </p>
     <p class="hint">
       Opens a popup in the focused text field with smart suggestions and lorem
-      ipsum options. Customize this shortcut at
+      ipsum options.
+    </p>
+
+    <p class="shortcut-display" style="margin-top: 12px">
+      <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>K</kbd>
+    </p>
+    <p class="hint">
+      Instantly auto-fills the current form with fake data. Click on any form
+      field first, then press the shortcut.
+    </p>
+
+    <p class="hint" style="margin-top: 12px">
+      Customize shortcuts at
       <strong>chrome://extensions/shortcuts</strong>
     </p>
+
+    <hr class="section-divider" />
+
+    <h2 class="section-heading">Screenshot Upload</h2>
+    <p class="hint" style="margin-bottom: 12px">
+      Configure your bearer token for uploading screenshots to the image service.
+      Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> to capture a region.
+    </p>
+    <label class="input-row">
+      <span class="input-label">Bearer Token</span>
+      <input type="password" id="screenshot-token" placeholder="Enter your token" />
+    </label>
 
     <script src="options.js"></script>
   </body>

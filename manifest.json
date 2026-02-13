@@ -3,7 +3,8 @@
   "name": "Right Click Ipsum",
   "version": "1.0.0",
   "description": "Right-click in any text field to insert lorem ipsum text.",
-  "permissions": ["contextMenus", "storage", "activeTab", "scripting"],
+  "permissions": ["contextMenus", "storage", "activeTab", "scripting", "clipboardWrite"],
+  "host_permissions": ["https://image.wondersauce.app/*"],
   "background": {
     "service_worker": "background.js",
     "type": "module"
@@ -24,6 +25,20 @@
         "mac": "MacCtrl+Shift+L"
       },
       "description": "Open Ipsum popup in focused field"
+    },
+    "trigger-screenshot": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+S",
+        "mac": "MacCtrl+Shift+S"
+      },
+      "description": "Capture screen region and upload"
+    },
+    "trigger-form-fill": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+K",
+        "mac": "MacCtrl+Shift+K"
+      },
+      "description": "Auto-fill the current form"
     }
   },
   "content_scripts": [

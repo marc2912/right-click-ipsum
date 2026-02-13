@@ -83,6 +83,16 @@
   function getFormContainer(field) {
     const form = field.closest("form");
     if (form) return { container: form, isForm: true };
+
+    // Walk up to find the closest ancestor with multiple editable fields
+    let el = field.parentElement;
+    while (el && el !== document.body) {
+      if (getEditableFields(el).length >= 2) {
+        return { container: el, isForm: false };
+      }
+      el = el.parentElement;
+    }
+
     return { container: document.body, isForm: false };
   }
 
@@ -94,11 +104,12 @@
   function fillFields(container, randomize) {
     const fakedata = window.__rci && window.__rci.fakedata;
     const detector = window.__rci && window.__rci.fielddetector;
-    if (!fakedata || !detector) return;
+    if (!fakedata || !detector) return null;
 
     const identity = fakedata.generateIdentity();
     const fields = getEditableFields(container);
     const originalField = document.activeElement;
+    const filledTypes = new Set();
 
     for (const el of fields) {
       if (el.tagName === "SELECT") {
@@ -136,6 +147,7 @@
         }
 
         el.value = chosen.value;
+        if (topType) filledTypes.add(topType);
         el.dispatchEvent(new Event("change", { bubbles: true }));
         el.dispatchEvent(new Event("input", { bubbles: true }));
         continue;
@@ -157,6 +169,7 @@
       const topType = detections[0].type;
       const value = identity[topType];
       if (value == null) continue;
+      filledTypes.add(topType);
       insertText(el, value);
     }
 
@@ -164,6 +177,60 @@
     if (originalField && originalField.focus) {
       originalField.focus();
     }
+
+    return { identity, filledTypes };
+  }
+
+  // ── Toast + clipboard helpers ──
+
+  function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise((resolve, reject) => {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand("copy");
+        resolve();
+      } catch (err) {
+        reject(err);
+      } finally {
+        ta.remove();
+      }
+    });
+  }
+
+  function showToast(message, isError) {
+    const toast = document.createElement("div");
+    Object.assign(toast.style, {
+      position: "fixed",
+      bottom: "20px",
+      right: "20px",
+      zIndex: "2147483647",
+      padding: "10px 16px",
+      borderRadius: "8px",
+      background: isError ? "#d93025" : "#1a73e8",
+      color: "#fff",
+      fontSize: "14px",
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+      transition: "opacity 0.3s",
+      opacity: "1",
+      maxWidth: "350px",
+      wordBreak: "break-word",
+    });
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = "0";
+      setTimeout(() => toast.remove(), 300);
+    }, 2000);
+    return toast;
   }
 
   // ── Popup state ──
@@ -517,27 +584,59 @@
 
   // ── Message listener from background ──
 
-  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-    if (msg.action !== "trigger-popup") return;
-
-    const el = document.activeElement;
-    if (!el) return;
-
-    // Must be editable
-    const isEditable =
+  function isEditableField(el) {
+    if (!el) return false;
+    return (
       (el.tagName === "INPUT" && !el.readOnly && !el.disabled &&
         /^(text|email|tel|url|search|password|number|)$/i.test(el.type)) ||
       (el.tagName === "TEXTAREA" && !el.readOnly && !el.disabled) ||
-      el.isContentEditable;
+      (el.tagName === "SELECT" && !el.disabled) ||
+      el.isContentEditable
+    );
+  }
 
-    if (!isEditable) return;
+  function applySettings(response) {
+    const fakedata = window.__rci && window.__rci.fakedata;
+    if (fakedata) {
+      fakedata.setEmailDomain(response && response.emailDomain);
+    }
+  }
 
-    // Fetch settings then show popup
-    chrome.runtime.sendMessage({ action: "get-settings" }, (response) => {
-      const randomize = response && response.randomize || false;
-      showPopup(el, randomize);
-    });
+  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    if (msg.action === "trigger-popup") {
+      const el = document.activeElement;
+      if (!isEditableField(el)) return;
 
-    sendResponse({ ok: true });
+      chrome.runtime.sendMessage({ action: "get-settings" }, (response) => {
+        const randomize = response && response.randomize || false;
+        applySettings(response);
+        showPopup(el, randomize);
+      });
+
+      sendResponse({ ok: true });
+      return;
+    }
+
+    if (msg.action === "trigger-form-fill") {
+      const el = document.activeElement;
+      if (!isEditableField(el)) return;
+
+      chrome.runtime.sendMessage({ action: "get-settings" }, (response) => {
+        const randomize = response && response.randomize || false;
+        applySettings(response);
+        const { container } = getFormContainer(el);
+        const result = fillFields(container, randomize);
+        if (result && result.filledTypes.has("email")) {
+          copyToClipboard(result.identity.email).then(() => {
+            showToast(result.identity.email + " copied to clipboard!");
+          }).catch(() => {
+            showToast("Form filled but clipboard write failed.", true);
+          });
+        }
+      });
+
+      sendResponse({ ok: true });
+      return;
+    }
   });
 })();

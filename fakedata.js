@@ -29,9 +29,39 @@
     "Apt 4B", "Suite 200", "Unit 12", "Floor 3", "#301", "Apt 7",
   ];
 
+  const companies = [
+    "Velora Systems", "Crestpoint Digital", "Nimbus & Hart", "Oxbow Industries",
+    "Pinecrest Labs", "Quartex Solutions", "Brightfield Analytics", "Sablerock Engineering",
+    "Dawnline Creative", "Ferrocast Manufacturing", "Kitebridge Consulting", "Lumara Health",
+    "Thornwell Capital", "Peregrine Dynamics", "Cobalt Fern Studio", "Ridgewater Technologies",
+    "Arcloom Software", "Brassworth Holdings", "Sunvale Robotics", "Glenhaven Partners",
+    "Tidesmith Media", "Voltera Group", "Ironpeak Logistics", "Crestwave Audio",
+    "Plumstead Ventures", "Oakmere Financial", "Skyward Provisions", "Netherwood Research",
+    "Copperline Design", "Starboard Freight", "Maplecroft Security", "Fathom Data",
+    "Greenspire Energy", "Holloway Biotech", "Caliber Point AI", "Duskfall Interactive",
+    "Rivervane Publishing", "Stonelathe Collective", "Quilmere Architects", "Aethon Cloud",
+    "Pinwheel Brands", "Cruxpoint Advisors", "Brindlewood Farms", "Zephyra Networks",
+    "Goldmark Insurance", "Wickham Aerospace", "Trelliswork HR", "Cedarbloom Wellness",
+    "Voltbridge Electric", "Harmon & Slate", "Foxglove Retail", "Deepwell Mining",
+    "Suncross Payments", "Northspire Legal", "Brasswick Motors", "Tanglewood Games",
+    "Heatherstone Realty", "Skyfen Optics", "Larkspur Marine", "Clearpath Fiber",
+    "Pendleton & Gray", "Rimrock Materials", "Blueshore Packaging", "Stratton Vale Foods",
+    "Cindervault Storage", "Mossgate Education", "Ironhaven Defense", "Whitmore Signal",
+    "Driftstone Supply", "Falconer Digital", "Junipera Cosmetics", "Blackwell Precision",
+    "Pinehurst Textiles", "Daymark Navigation", "Thornbury Pharma", "Galecrest Wind",
+    "Copperfield Apparel", "Silverlake Transit", "Cairnbrook Safety", "Ridgepoint Crypto",
+    "Ambervale Agriculture", "Steelcross Aviation", "Maplethorn Furniture", "Glenwick Telecom",
+    "Seacliff Hospitality", "Ironbark Construction", "Dewpoint Climate", "Flintshire Composites",
+    "Starling & Finch", "Crestholm Sports", "Bramblegate Events", "Wildshore Aquaculture",
+    "Ashford Instruments", "Pinnacle Loom", "Quarryfield Cement", "Sablewood Interiors",
+    "Windmark Drones", "Hearthstone Staffing", "Bayline Sensors", "Thorngate Distilling",
+  ];
+
   const countries = [
     "United States", "Canada", "United Kingdom", "Australia",
   ];
+
+  let emailDomain = "example.com";
 
   function pick(arr) {
     return arr[Math.floor(Math.random() * arr.length)];
@@ -50,8 +80,9 @@
     email: () => {
       const first = pick(firstNames).toLowerCase();
       const last = pick(lastNames).toLowerCase();
-      return first + "." + last + "@example.com";
+      return first + "." + last + "@" + emailDomain;
     },
+    company: () => pick(companies),
     phone: () => "(555) 555-" + randomDigits(4),
     url: () => "https://www.example.com",
     address1: () => randomDigits(3) + " " + pick(streets),
@@ -78,7 +109,8 @@
       firstName: first,
       lastName: last,
       fullName: first + " " + last,
-      email: first.toLowerCase() + "." + last.toLowerCase() + "@example.com",
+      email: first.toLowerCase() + "." + last.toLowerCase() + "@" + emailDomain,
+      company: pick(companies),
       phone: "(555) 555-" + randomDigits(4),
       url: "https://www.example.com",
       address1: randomDigits(3) + " " + pick(streets),
@@ -98,6 +130,7 @@
     lastName: "Last Name",
     fullName: "Full Name",
     email: "Email",
+    company: "Company",
     phone: "Phone",
     url: "URL",
     address1: "Address",
@@ -111,6 +144,10 @@
     expiration: "Expiration",
   };
 
+  function setEmailDomain(domain) {
+    emailDomain = domain || "example.com";
+  }
+
   window.__rci = window.__rci || {};
-  window.__rci.fakedata = { generators, labels, generateIdentity };
+  window.__rci.fakedata = { generators, labels, generateIdentity, setEmailDomain };
 })();

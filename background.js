@@ -37,31 +37,106 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 chrome.commands.onCommand.addListener(async (command) => {
-  if (command !== "trigger-ipsum-popup") return;
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) return;
-  try {
-    // Inject into all frames (no-op if already loaded via manifest)
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id, allFrames: true },
-      files: ["fakedata.js", "fielddetector.js", "content.js"],
-    });
-  } catch {
-    // Some frames may not be injectable
-  }
-  try {
-    await chrome.tabs.sendMessage(tab.id, { action: "trigger-popup" });
-  } catch {
-    // Content script not available (chrome:// pages, pre-install tabs)
+  if (command === "trigger-ipsum-popup") {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) return;
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id, allFrames: true },
+        files: ["fakedata.js", "fielddetector.js", "content.js"],
+      });
+    } catch {
+      // Some frames may not be injectable
+    }
+    try {
+      await chrome.tabs.sendMessage(tab.id, { action: "trigger-popup" });
+    } catch {
+      // Content script not available (chrome:// pages, pre-install tabs)
+    }
+  } else if (command === "trigger-form-fill") {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) return;
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id, allFrames: true },
+        files: ["fakedata.js", "fielddetector.js", "content.js"],
+      });
+    } catch {
+      // Some frames may not be injectable
+    }
+    try {
+      await chrome.tabs.sendMessage(tab.id, { action: "trigger-form-fill" });
+    } catch {
+      // Content script not available
+    }
+  } else if (command === "trigger-screenshot") {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) return;
+    try {
+      const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: "png" });
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ["screenshot.js"],
+      });
+      await chrome.tabs.sendMessage(tab.id, {
+        action: "start-selection",
+        dataUrl,
+      });
+    } catch {
+      // Cannot capture or inject on this page
+    }
   }
 });
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg.action !== "get-settings") return;
-  chrome.storage.sync.get("randomize", ({ randomize }) => {
-    sendResponse({ randomize: randomize || false });
-  });
-  return true;
+  if (msg.action === "get-settings") {
+    chrome.storage.sync.get(["randomize", "emailDomain"], ({ randomize, emailDomain }) => {
+      sendResponse({ randomize: randomize || false, emailDomain: emailDomain || "" });
+    });
+    return true;
+  }
+
+  if (msg.action === "upload-screenshot") {
+    (async () => {
+      try {
+        const { screenshotToken } = await chrome.storage.sync.get("screenshotToken");
+        if (!screenshotToken) {
+          sendResponse({ success: false, error: "No API token configured. Set it in extension settings." });
+          return;
+        }
+
+        const base64 = msg.dataUrl.split(",")[1];
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: "image/png" });
+
+        const formData = new FormData();
+        formData.append("file", blob, "screenshot.png");
+        formData.append("folder", "screenshots");
+
+        const resp = await fetch("https://image.wondersauce.app/api/ext-upload", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${screenshotToken}` },
+          body: formData,
+        });
+
+        if (!resp.ok) {
+          const text = await resp.text();
+          sendResponse({ success: false, error: `Upload failed (${resp.status}): ${text}` });
+          return;
+        }
+
+        const data = await resp.json();
+        sendResponse({ success: true, url: data.url });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
